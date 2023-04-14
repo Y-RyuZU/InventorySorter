@@ -1,0 +1,4 @@
+name: InventorySorter
+version: '${version}'
+main: com.github.ryuzu.inventorysorter.InventorySorter
+api-version: 1.19
