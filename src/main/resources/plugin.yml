@@ -2,3 +2,4 @@ name: InventorySorter
 version: '${version}'
 main: com.github.ryuzu.inventorysorter.InventorySorter
 api-version: 1.16
+description: インベントリの範囲外をダブルクリックすると、インベントリ内のアイテムを整理する簡単なプラグインです。

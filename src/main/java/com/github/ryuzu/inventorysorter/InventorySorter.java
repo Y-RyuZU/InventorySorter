@@ -6,6 +6,7 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.*;
@@ -35,16 +36,12 @@ public final class InventorySorter extends JavaPlugin implements Listener {
         Inventory top = e.getView().getTopInventory();
         Inventory bottom = e.getView().getBottomInventory();
         Player p = (Player) e.getWhoClicked();
-        System.out.println(top.getType());
-        System.out.println(bottom.getType());
         if (!(top.getType().equals(InventoryType.CHEST) || bottom.getType().equals(InventoryType.PLAYER)))
-            return;
-        if (top.getClass().getName().contains("Custom"))
             return;
         if (!(cliked.containsKey(p.getUniqueId()) && cliked.get(p.getUniqueId()) + 200 > System.currentTimeMillis()))
             cliked.put(p.getUniqueId(), System.currentTimeMillis());
         else {
-            if (top.getType().equals(InventoryType.CHEST))
+            if (top.getType().equals(InventoryType.CHEST) && !top.getClass().getName().contains("Custom"))
                 sort(top, 0, top.getSize());
             else
                 sort(bottom, 9, 36);
