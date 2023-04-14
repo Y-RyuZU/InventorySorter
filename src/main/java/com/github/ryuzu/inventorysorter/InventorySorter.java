@@ -1,18 +1,19 @@
 package com.github.ryuzu.inventorysorter;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.inventory.DoubleChestInventory;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import javax.annotation.Nullable;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public final class InventorySorter extends JavaPlugin implements Listener {
     private static HashMap<UUID, Long> cliked = new HashMap<>();
@@ -31,30 +32,36 @@ public final class InventorySorter extends JavaPlugin implements Listener {
     @EventHandler
     public void sort(InventoryClickEvent e) {
         if (e.getClickedInventory() != null) return;
-        Inventory inv = e.getView().getTopInventory();
-        if (!(
-                (inv.getType().equals(InventoryType.CHEST)) ||
-                inv instanceof DoubleChestInventory ||
-                inv instanceof PlayerInventory
-        )) return;
-        if(!(cliked.containsKey(e.getWhoClicked().getUniqueId()) && cliked.get(e.getWhoClicked().getUniqueId()) + 100 > System.currentTimeMillis()))
-            cliked.put(e.getWhoClicked().getUniqueId(), System.currentTimeMillis());
-        else  {
-            if(inv instanceof PlayerInventory)
-                sort(inv, 9, 36);
+        Inventory top = e.getView().getTopInventory();
+        Inventory bottom = e.getView().getBottomInventory();
+        Player p = (Player) e.getWhoClicked();
+        System.out.println(top.getType());
+        System.out.println(bottom.getType());
+        if (!(top.getType().equals(InventoryType.CHEST) || bottom.getType().equals(InventoryType.PLAYER)))
+            return;
+        if (top.getClass().getName().contains("Custom"))
+            return;
+        if (!(cliked.containsKey(p.getUniqueId()) && cliked.get(p.getUniqueId()) + 200 > System.currentTimeMillis()))
+            cliked.put(p.getUniqueId(), System.currentTimeMillis());
+        else {
+            if (top.getType().equals(InventoryType.CHEST))
+                sort(top, 0, top.getSize());
             else
-                sort(inv, 0, inv.getSize());
+                sort(bottom, 9, 36);
+            p.playSound(p.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_ON, 1, 2);
+            p.updateInventory();
         }
     }
 
     // sort inventory from start to end by material or display name alphabetically
     private void sort(Inventory inv, int start, int end) {
-        List<ItemStack> sortedItems = new ArrayList<>();
-        Arrays.stream(inv.getContents()).skip(start).limit(end - start).filter(Objects::nonNull).forEach(sortedItems::add);
-        for(int i = start; i < end; i++) inv.setItem(i, null);
+        List<ItemStack> sortedItems = optimizeInventory(Arrays.stream(inv.getStorageContents()).skip(start).limit(end - start).filter(Objects::nonNull).collect(Collectors.toList()));
+        for (int i = start; i < end; i++) inv.setItem(i, null);
         sortedItems.sort((item1, item2) -> {
-            if(hasDisplayName(item1) && hasDisplayName(item2))
-                return ChatColor.stripColor(item1.getItemMeta().getDisplayName()).compareTo(ChatColor.stripColor(item2.getItemMeta().getDisplayName()));
+            if (item1.isSimilar(item2))
+                return item2.getAmount() - item1.getAmount();
+            else if (hasDisplayName(item1) && hasDisplayName(item2))
+                return comapreByMaxStackSize(ChatColor.stripColor(item1.getItemMeta().getDisplayName()), ChatColor.stripColor(item2.getItemMeta().getDisplayName()), item1.getType().getMaxStackSize(), item2.getType().getMaxStackSize());
             else if (hasDisplayName(item1))
                 return -1;
             else if (hasDisplayName(item2))
@@ -62,12 +69,50 @@ public final class InventorySorter extends JavaPlugin implements Listener {
             else if (item1.getType().equals(item2.getType()))
                 return 0;
             else
-                return item1.getType().name().compareTo(item2.getType().name());
+                return comapreByMaxStackSize(item1.getType().name(), item2.getType().name(), item1.getType().getMaxStackSize(), item2.getType().getMaxStackSize());
         });
-        inv.addItem(sortedItems.toArray(new ItemStack[0]));
+        for (int i = start; i < start + sortedItems.size(); i++) inv.setItem(i, sortedItems.get(i - start));
     }
 
-    private boolean hasDisplayName(@Nullable ItemStack item) {
+    private int comapreByMaxStackSize(String item1, String item2, int max1, int max2) {
+        if(max1 == 1 && max2 != 1)
+            return -1;
+        else if(max1 != 1 && max2 == 1)
+            return 1;
+        else
+            return item1.compareTo(item2);
+    }
+
+    private boolean hasDisplayName(ItemStack item) {
         return item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName();
+    }
+
+    private static List<ItemStack> optimizeInventory(List<ItemStack> inventory) {
+        Map<ItemStack, Integer> itemMap = inventory.stream()
+                .filter(Objects::nonNull)
+                .filter(item -> item.getType() != Material.AIR)
+                .collect(Collectors.toMap(
+                        item -> {
+                            ItemStack clone = item.clone();
+                            clone.setAmount(1);
+                            return clone;
+                        },
+                        ItemStack::getAmount,
+                        Integer::sum
+                ));
+
+        List<ItemStack> result = new ArrayList<>();
+        for (Map.Entry<ItemStack, Integer> entry : itemMap.entrySet()) {
+            ItemStack item = entry.getKey();
+            int count = entry.getValue();
+            int maxStackSize = item.getType().getMaxStackSize();
+            for (int i = 0; i < count; i += maxStackSize) {
+                ItemStack newItem = item.clone();
+                newItem.setAmount(Math.min(maxStackSize, count - i));
+                result.add(newItem);
+            }
+        }
+
+        return result;
     }
 }
