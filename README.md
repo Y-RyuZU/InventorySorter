@@ -32,7 +32,7 @@ This plugin is designed to identify and sort inventories created by other plugin
 
 Sorted alphabetically by Material and then by DisplayName.
 
-[![Demo Video](https://www.youtube.com/embed/IPRliX64XKY)](https://www.youtube.com/watch?v=IPRliX64XKY)
+[![Demo Video](https://img.youtube.com/vi/IPRliX64XKY/maxresdefault.jpg)](https://www.youtube.com/watch?v=IPRliX64XKY)
 
 ## 日本語
 
