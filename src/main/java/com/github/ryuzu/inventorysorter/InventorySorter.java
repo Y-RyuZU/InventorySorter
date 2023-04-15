@@ -37,7 +37,7 @@ public final class InventorySorter extends JavaPlugin implements Listener {
         Inventory top = e.getView().getTopInventory();
         Inventory bottom = e.getView().getBottomInventory();
         Player p = (Player) e.getWhoClicked();
-        if (!(top.getType().equals(InventoryType.CHEST) || top.getType().equals(InventoryType.ENDER_CHEST) || bottom.getType().equals(InventoryType.PLAYER)))
+        if (!(top.getType().equals(InventoryType.CHEST) || top.getType().equals(InventoryType.ENDER_CHEST) || top.getType().equals(InventoryType.SHULKER_BOX)  || bottom.getType().equals(InventoryType.PLAYER)))
             return;
         if (!(cliked.containsKey(p.getUniqueId()) && cliked.get(p.getUniqueId()) + 200 > System.currentTimeMillis()))
             cliked.put(p.getUniqueId(), System.currentTimeMillis());
