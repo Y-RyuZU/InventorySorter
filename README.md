@@ -25,13 +25,15 @@ This plugin is designed to identify and sort inventories created by other plugin
 
 ### Sorting Priority
 
-- Items that can stack without a name
-- Items that cannot stack without a name
-- Items that can stack with a name
-- Items that cannot stack with a name
+- Has display name
+- Max stack size is not 1
+- Sort by material name
+- Sort by custom model data
+- Sort by display name
 
 Sorted alphabetically by Material and then by DisplayName.
 
+##[Demo Video]
 [![Demo Video](https://img.youtube.com/vi/IPRliX64XKY/maxresdefault.jpg)](https://www.youtube.com/watch?v=IPRliX64XKY)
 
 ## 日本語
@@ -56,6 +58,10 @@ Sorted alphabetically by Material and then by DisplayName.
 
 ### 整理の優先度
 
-アイテム名なしスタックできるアイテム<アイテム名なしスタックできないアイテム<アイテム名ありスタックできるアイテム<アイテム名ありスタックできないアイテム
+- DisplayNameを持っているか
+- MaxStackSizeが1ではないか
+- Materialの名前順にソート
+- CustomModelDataの順にソート
+- DisplayNameの名前順にソート
 
 それぞれMaterialとDisplayNameでアルファベット順に整理します。
