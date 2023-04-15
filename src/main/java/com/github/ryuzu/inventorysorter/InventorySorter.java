@@ -10,6 +10,7 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.*;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
@@ -51,14 +52,19 @@ public final class InventorySorter extends JavaPlugin implements Listener {
     }
 
     // sort inventory from start to end by material or display name alphabetically
-    private void sort(Inventory inv, int start, int end) {
+    private static void sort(Inventory inv, int start, int end) {
         List<ItemStack> sortedItems = optimizeInventory(Arrays.stream(inv.getStorageContents()).skip(start).limit(end - start).filter(Objects::nonNull).collect(Collectors.toList()));
         for (int i = start; i < end; i++) inv.setItem(i, null);
-        sortedItems.sort((item1, item2) -> {
+        sortedItems.sort(sortInventory());
+        for (int i = start; i < start + sortedItems.size(); i++) inv.setItem(i, sortedItems.get(i - start));
+    }
+
+    private static Comparator<ItemStack> sortByNanme() {
+        return (item1, item2) -> {
             if (item1.isSimilar(item2))
                 return item2.getAmount() - item1.getAmount();
             else if (hasDisplayName(item1) && hasDisplayName(item2))
-                return comapreByMaxStackSize(ChatColor.stripColor(item1.getItemMeta().getDisplayName()), ChatColor.stripColor(item2.getItemMeta().getDisplayName()), item1.getType().getMaxStackSize(), item2.getType().getMaxStackSize());
+                return comapreByNameAndMaxStackSize(ChatColor.stripColor(item1.getItemMeta().getDisplayName()), ChatColor.stripColor(item2.getItemMeta().getDisplayName()), item1.getType().getMaxStackSize(), item2.getType().getMaxStackSize());
             else if (hasDisplayName(item1))
                 return -1;
             else if (hasDisplayName(item2))
@@ -66,12 +72,11 @@ public final class InventorySorter extends JavaPlugin implements Listener {
             else if (item1.getType().equals(item2.getType()))
                 return 0;
             else
-                return comapreByMaxStackSize(item1.getType().name(), item2.getType().name(), item1.getType().getMaxStackSize(), item2.getType().getMaxStackSize());
-        });
-        for (int i = start; i < start + sortedItems.size(); i++) inv.setItem(i, sortedItems.get(i - start));
+                return comapreByNameAndMaxStackSize(item1.getType().name(), item2.getType().name(), item1.getType().getMaxStackSize(), item2.getType().getMaxStackSize());
+        };
     }
 
-    private int comapreByMaxStackSize(String item1, String item2, int max1, int max2) {
+    private static int comapreByNameAndMaxStackSize(String item1, String item2, int max1, int max2) {
         if(max1 == 1 && max2 != 1)
             return -1;
         else if(max1 != 1 && max2 == 1)
@@ -80,8 +85,47 @@ public final class InventorySorter extends JavaPlugin implements Listener {
             return item1.compareTo(item2);
     }
 
-    private boolean hasDisplayName(ItemStack item) {
+    private static Comparator<ItemStack> sortInventory() {
+        return Comparator.comparing((ItemStack item) -> {
+            // DisplayNameを持っているかどうかを判定
+            if (item.getItemMeta() != null && item.getItemMeta().hasDisplayName()) {
+                return 0;
+            } else {
+                return 1;
+            }
+        }).thenComparing((ItemStack item) -> {
+            // MaxStackSizeが1かどうかを判定
+            if (item.getMaxStackSize() == 1) {
+                return 0;
+            } else {
+                return 1;
+            }
+        }).thenComparing((ItemStack item) -> {
+            // Materialの名前順にソート
+            return item.getType().name();
+        }).thenComparing((ItemStack item) -> {
+            // CustomModelDataの順にソート
+            if (item.getItemMeta() != null && item.getItemMeta().hasCustomModelData()) {
+                return item.getItemMeta().getCustomModelData();
+            } else {
+                return 0;
+            }
+        }).thenComparing((ItemStack item) -> {
+            // DisplayNameの名前順にソート
+            if (item.getItemMeta() != null && item.getItemMeta().hasDisplayName()) {
+                return item.getItemMeta().getDisplayName();
+            } else {
+                return "";
+            }
+        });
+    }
+
+    private static boolean hasDisplayName(ItemStack item) {
         return item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName();
+    }
+
+    private static int getCustomModelData(ItemStack item) {
+        return item != null && item.hasItemMeta() && item.getItemMeta().hasCustomModelData() ? item.getItemMeta().getCustomModelData() : 0;
     }
 
     private static List<ItemStack> optimizeInventory(List<ItemStack> inventory) {
