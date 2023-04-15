@@ -3,3 +3,9 @@ version: '${version}'
 main: com.github.ryuzu.inventorysorter.InventorySorter
 api-version: 1.13
 description: インベントリの範囲外をダブルクリックすると、インベントリ内のアイテムを整理する簡単なプラグインです。
+
+commands:
+  inventorysorter:
+    description: インベントリ整理の有効、無効を切り替えます
+    usage: /inventorysorter
+    aliases: [ is ]

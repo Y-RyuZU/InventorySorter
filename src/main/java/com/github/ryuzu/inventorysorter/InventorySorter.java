@@ -2,7 +2,10 @@ package com.github.ryuzu.inventorysorter;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,6 +14,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
@@ -19,10 +23,12 @@ import java.util.stream.IntStream;
 
 public final class InventorySorter extends JavaPlugin implements Listener {
     private static HashMap<UUID, Long> cliked = new HashMap<>();
+    private static InventorySorter instance;
 
     @Override
     public void onEnable() {
         // Plugin startup logic
+        instance = this;
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -31,18 +37,30 @@ public final class InventorySorter extends JavaPlugin implements Listener {
         // Plugin shutdown logic
     }
 
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (sender instanceof Player) {
+            Player p = (Player) sender;
+            if (command.getName().equalsIgnoreCase("is")) toggle(p);
+        }
+        return false;
+    }
+
     @EventHandler
     public void sort(InventoryClickEvent e) {
         if (e.getClickedInventory() != null) return;
         Inventory top = e.getView().getTopInventory();
         Inventory bottom = e.getView().getBottomInventory();
         Player p = (Player) e.getWhoClicked();
-        if (!(top.getType().equals(InventoryType.CHEST) || top.getType().equals(InventoryType.ENDER_CHEST) || top.getType().equals(InventoryType.SHULKER_BOX)  || bottom.getType().equals(InventoryType.PLAYER)))
+        if (!(top.getType().equals(InventoryType.CHEST) || top.getType().equals(InventoryType.ENDER_CHEST) || top.getType().equals(InventoryType.SHULKER_BOX) || top.getType().equals(InventoryType.BARREL)  || bottom.getType().equals(InventoryType.PLAYER)))
+            return;
+        Byte sort = p.getPersistentDataContainer().get(new NamespacedKey(this, "sort"), PersistentDataType.BYTE);
+        if(sort != null && sort == 0)
             return;
         if (!(cliked.containsKey(p.getUniqueId()) && cliked.get(p.getUniqueId()) + 200 > System.currentTimeMillis()))
             cliked.put(p.getUniqueId(), System.currentTimeMillis());
         else {
-            if (top.getType().equals(InventoryType.ENDER_CHEST) || (top.getType().equals(InventoryType.CHEST) && !top.getClass().getName().contains("Custom")))
+            if (top.getType().equals(InventoryType.BARREL) || top.getType().equals(InventoryType.SHULKER_BOX) || top.getType().equals(InventoryType.ENDER_CHEST)  || (top.getType().equals(InventoryType.CHEST) && !top.getClass().getName().contains("Custom")))
                 sort(top, 0, top.getSize());
             else
                 sort(bottom, 9, 36);
@@ -126,6 +144,17 @@ public final class InventorySorter extends JavaPlugin implements Listener {
 
     private static int getCustomModelData(ItemStack item) {
         return item != null && item.hasItemMeta() && item.getItemMeta().hasCustomModelData() ? item.getItemMeta().getCustomModelData() : 0;
+    }
+
+    private static void toggle(Player p) {
+        Byte bool = p.getPersistentDataContainer().get(new NamespacedKey(instance, "sort"), PersistentDataType.BYTE);
+        if (bool != null && bool == 0) {
+            p.getPersistentDataContainer().set(new NamespacedKey(instance, "sort"), PersistentDataType.BYTE, (byte) 1);
+            p.sendMessage("§aソートを有効にしました");
+        } else {
+            p.getPersistentDataContainer().set(new NamespacedKey(instance, "sort"), PersistentDataType.BYTE, (byte) 0);
+            p.sendMessage("§cソートを無効にしました");
+        }
     }
 
     private static List<ItemStack> optimizeInventory(List<ItemStack> inventory) {
